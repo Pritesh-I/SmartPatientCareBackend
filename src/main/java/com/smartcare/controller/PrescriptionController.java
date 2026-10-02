@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/prescriptions")
@@ -25,6 +26,11 @@ public class PrescriptionController {
             prescription.setPrescribedDate(LocalDate.now());
         }
 
+        if (prescription.getStatus() == null ||
+            prescription.getStatus().isBlank()) {
+            prescription.setStatus("PENDING_APPROVAL");
+        }
+
         return repository.save(prescription);
     }
 
@@ -32,7 +38,8 @@ public class PrescriptionController {
     public List<Prescription> getPatientPrescriptions(
             @PathVariable Long patientId) {
 
-        return repository.findByPatientId(patientId);
+        return repository.findByPatientIdAndStatus(
+                patientId, "APPROVED");
     }
 
     @GetMapping("/doctor/{doctorId}")
@@ -42,11 +49,59 @@ public class PrescriptionController {
         return repository.findByDoctorId(doctorId);
     }
 
+    @GetMapping("/doctor/{doctorId}/pending")
+    public List<Prescription> getPendingPrescriptions(
+            @PathVariable Long doctorId) {
+
+        return repository.findByDoctorIdAndStatus(
+                doctorId, "PENDING_APPROVAL");
+    }
+
     @GetMapping("/consultation/{consultationId}")
     public List<Prescription> getConsultationPrescriptions(
             @PathVariable Long consultationId) {
 
-        return repository.findByConsultationId(consultationId);
+        return repository.findByConsultationIdAndStatus(
+                consultationId, "APPROVED");
+    }
+
+    @PutMapping("/{id}/status")
+    public Object updateStatus(
+            @PathVariable Long id,
+            @RequestParam String status) {
+
+        Prescription prescription =
+                repository.findById(id).orElse(null);
+
+        if (prescription == null) {
+            return Map.of(
+                    "success", false,
+                    "message", "Prescription not found."
+            );
+        }
+
+        String newStatus = status.toUpperCase();
+
+        if (!newStatus.equals("PENDING_APPROVAL") &&
+            !newStatus.equals("APPROVED") &&
+            !newStatus.equals("REJECTED")) {
+
+            return Map.of(
+                    "success", false,
+                    "message",
+                    "Invalid status. Use PENDING_APPROVAL, APPROVED or REJECTED."
+            );
+        }
+
+        prescription.setStatus(newStatus);
+
+        Prescription saved = repository.save(prescription);
+
+        return Map.of(
+                "success", true,
+                "message", "Prescription status updated.",
+                "prescription", saved
+        );
     }
 
     @DeleteMapping("/{id}")

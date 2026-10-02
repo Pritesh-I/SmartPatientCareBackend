@@ -18,9 +18,11 @@ public class Prescription {
     private String dosage;
     private String frequency;
     private String duration;
-    
+
     @Column(length = 1000)
     private String instructions;
+
+    private String status;
 
     private LocalDate prescribedDate;
 
@@ -97,6 +99,14 @@ public class Prescription {
 
     public void setInstructions(String instructions) {
         this.instructions = instructions;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public LocalDate getPrescribedDate() {

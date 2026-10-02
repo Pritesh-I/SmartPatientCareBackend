@@ -10,7 +10,16 @@ public interface PrescriptionRepository
 
     List<Prescription> findByPatientId(Long patientId);
 
+    List<Prescription> findByPatientIdAndStatus(
+            Long patientId, String status);
+
     List<Prescription> findByDoctorId(Long doctorId);
 
+    List<Prescription> findByDoctorIdAndStatus(
+            Long doctorId, String status);
+
     List<Prescription> findByConsultationId(Long consultationId);
+
+    List<Prescription> findByConsultationIdAndStatus(
+            Long consultationId, String status);
 }
