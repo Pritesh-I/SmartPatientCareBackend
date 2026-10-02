@@ -1,0 +1,36 @@
+package com.smartcare.controller;
+
+import com.smartcare.model.Patient;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/patients")
+public class PatientController {
+
+    private final List<Patient> patients = new ArrayList<>();
+
+    @GetMapping
+    public List<Patient> getAllPatients() {
+        return patients;
+    }
+
+    @GetMapping("/{id}")
+    public Patient getPatientById(@PathVariable Long id) {
+        for (Patient patient : patients) {
+            if (patient.getId().equals(id)) {
+                return patient;
+            }
+        }
+        return null;
+    }
+
+    @PostMapping
+    public Patient addPatient(@RequestBody Patient patient) {
+        patient.setId((long) (patients.size() + 1));
+        patients.add(patient);
+        return patient;
+    }
+}
