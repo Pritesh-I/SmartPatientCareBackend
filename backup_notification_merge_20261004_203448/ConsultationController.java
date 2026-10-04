@@ -5,7 +5,6 @@ import com.smartcare.model.DeviceToken;
 import com.smartcare.repository.ConsultationRepository;
 import com.smartcare.repository.DeviceTokenRepository;
 import com.smartcare.service.FcmService;
-import com.smartcare.service.WebNotificationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -18,18 +17,15 @@ public class ConsultationController {
     private final ConsultationRepository repository;
     private final DeviceTokenRepository deviceTokenRepository;
     private final FcmService fcmService;
-    private final WebNotificationService webNotificationService;
 
     public ConsultationController(
             ConsultationRepository repository,
             DeviceTokenRepository deviceTokenRepository,
-            FcmService fcmService,
-            WebNotificationService webNotificationService) {
+            FcmService fcmService) {
 
         this.repository = repository;
         this.deviceTokenRepository = deviceTokenRepository;
         this.fcmService = fcmService;
-        this.webNotificationService = webNotificationService;
     }
 
     @PostMapping
@@ -113,15 +109,9 @@ public class ConsultationController {
 
         Consultation saved = repository.save(consultation);
 
-        // Send web notification ONLY when approval happens.
+        // Send Firebase notification ONLY when approval happens.
         if (!"APPROVED".equalsIgnoreCase(oldStatus)
                 && "APPROVED".equals(newStatus)) {
-
-            webNotificationService.notifyPatient(
-                    consultation.getPatientId(),
-                    "Consultation Approved",
-                    "Your doctor has approved your consultation. Your clinical information is now available."
-            );
 
             try {
                 List<DeviceToken> devices =

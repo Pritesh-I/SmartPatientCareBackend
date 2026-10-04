@@ -2,7 +2,6 @@ package com.smartcare.controller;
 
 import com.smartcare.model.QueueToken;
 import com.smartcare.repository.QueueTokenRepository;
-import com.smartcare.service.WebNotificationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -16,13 +15,9 @@ import java.util.Map;
 public class QueueController {
 
     private final QueueTokenRepository repository;
-    private final WebNotificationService webNotificationService;
 
-    public QueueController(
-            QueueTokenRepository repository,
-            WebNotificationService webNotificationService) {
+    public QueueController(QueueTokenRepository repository) {
         this.repository = repository;
-        this.webNotificationService = webNotificationService;
     }
 
     // =========================================================
@@ -68,17 +63,7 @@ public class QueueController {
             token.setRoom("Room 1");
         }
 
-        QueueToken saved = repository.save(token);
-
-        webNotificationService.notifyPatient(
-                saved.getPatientId(),
-                "Token Assigned",
-                "Your token is #" + saved.getTokenNumber()
-                        + " in " + saved.getRoom()
-                        + ". Please wait for your turn."
-        );
-
-        return saved;
+        return repository.save(token);
     }
 
     // =========================================================
@@ -138,26 +123,11 @@ public class QueueController {
             return null;
         }
 
-        String oldStatus = token.getStatus();
         String newStatus = status.toUpperCase();
 
         token.setStatus(newStatus);
 
-        QueueToken saved = repository.save(token);
-
-        if ("CALLED".equals(newStatus)
-                && !"CALLED".equalsIgnoreCase(oldStatus)) {
-
-            webNotificationService.notifyPatient(
-                    saved.getPatientId(),
-                    "Token Called",
-                    "Your token #" + saved.getTokenNumber()
-                            + " has been called. Please proceed to "
-                            + saved.getRoom() + "."
-            );
-        }
-
-        return saved;
+        return repository.save(token);
     }
 
     // =========================================================

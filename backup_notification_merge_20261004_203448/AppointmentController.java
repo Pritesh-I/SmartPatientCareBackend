@@ -7,7 +7,6 @@ import com.smartcare.repository.AppointmentRepository;
 import com.smartcare.repository.DoctorAvailabilityRepository;
 import com.smartcare.repository.UserAccountRepository;
 import com.smartcare.service.FcmService;
-import com.smartcare.service.WebNotificationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
@@ -26,20 +25,17 @@ public class AppointmentController {
     private final DoctorAvailabilityRepository availabilityRepository;
     private final UserAccountRepository userAccountRepository;
     private final FcmService fcmService;
-    private final WebNotificationService webNotificationService;
 
     public AppointmentController(
             AppointmentRepository appointmentRepository,
             DoctorAvailabilityRepository availabilityRepository,
             UserAccountRepository userAccountRepository,
-            FcmService fcmService,
-            WebNotificationService webNotificationService) {
+            FcmService fcmService) {
 
         this.appointmentRepository = appointmentRepository;
         this.availabilityRepository = availabilityRepository;
         this.userAccountRepository = userAccountRepository;
         this.fcmService = fcmService;
-        this.webNotificationService = webNotificationService;
     }
 
     @PostMapping
@@ -126,13 +122,6 @@ public class AppointmentController {
         response.put("success", true);
         response.put("message", "Appointment booked successfully.");
         response.put("appointment", saved);
-
-        // Notify all receptionists that a new appointment arrived.
-        webNotificationService.notifyRole(
-                "RECEPTIONIST",
-                "New Appointment",
-                "A patient has booked a new appointment. Please review and confirm it."
-        );
 
         return response;
     }
@@ -271,21 +260,23 @@ public class AppointmentController {
         if ("CONFIRMED".equals(newStatus) &&
                 appointment.getPatientId() != null) {
 
-            webNotificationService.notifyPatient(
-                    appointment.getPatientId(),
-                    "Appointment Confirmed",
-                    "Your appointment has been confirmed. Please check Smart Patient Care for your appointment and token details."
-            );
-        }
+            UserAccount user =
+                    userAccountRepository.findAll()
+                            .stream()
+                            .filter(u ->
+                                    "PATIENT".equalsIgnoreCase(u.getRole()) &&
+                                    appointment.getPatientId().equals(u.getProfileId()))
+                            .findFirst()
+                            .orElse(null);
 
-        if ("CANCELLED".equals(newStatus) &&
-                appointment.getPatientId() != null) {
-
-            webNotificationService.notifyPatient(
-                    appointment.getPatientId(),
-                    "Appointment Cancelled",
-                    "Your appointment has been cancelled."
-            );
+            if (user != null) {
+                notificationsSent =
+                        fcmService.sendToUser(
+                                user.getId(),
+                                "Appointment Confirmed",
+                                "Your appointment has been confirmed. Please check Smart Patient Care for your appointment and token details."
+                        );
+            }
         }
 
         return Map.of(

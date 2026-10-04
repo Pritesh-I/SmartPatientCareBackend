@@ -2,7 +2,6 @@ package com.smartcare.controller;
 
 import com.smartcare.model.MedicineRefill;
 import com.smartcare.repository.MedicineRefillRepository;
-import com.smartcare.service.WebNotificationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -13,13 +12,9 @@ import java.util.List;
 public class MedicineRefillController {
 
     private final MedicineRefillRepository repository;
-    private final WebNotificationService webNotificationService;
 
-    public MedicineRefillController(
-            MedicineRefillRepository repository,
-            WebNotificationService webNotificationService) {
+    public MedicineRefillController(MedicineRefillRepository repository) {
         this.repository = repository;
-        this.webNotificationService = webNotificationService;
     }
 
     @PostMapping
@@ -72,23 +67,9 @@ public class MedicineRefillController {
         MedicineRefill refill = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Refill request not found"));
 
-        String oldStatus = refill.getStatus();
-
         refill.setStatus(status.toUpperCase());
 
-        MedicineRefill saved = repository.save(refill);
-
-        if (!saved.getStatus().equalsIgnoreCase(oldStatus)) {
-
-            webNotificationService.notifyPatient(
-                    saved.getPatientId(),
-                    "Medicine Refill Update",
-                    "Your medicine refill request is now "
-                            + saved.getStatus() + "."
-            );
-        }
-
-        return saved;
+        return repository.save(refill);
     }
 
     @DeleteMapping("/{id}")

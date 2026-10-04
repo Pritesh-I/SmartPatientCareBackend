@@ -2,7 +2,6 @@ package com.smartcare.controller;
 
 import com.smartcare.model.Prescription;
 import com.smartcare.repository.PrescriptionRepository;
-import com.smartcare.service.WebNotificationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -14,13 +13,9 @@ import java.util.Map;
 public class PrescriptionController {
 
     private final PrescriptionRepository repository;
-    private final WebNotificationService webNotificationService;
 
-    public PrescriptionController(
-            PrescriptionRepository repository,
-            WebNotificationService webNotificationService) {
+    public PrescriptionController(PrescriptionRepository repository) {
         this.repository = repository;
-        this.webNotificationService = webNotificationService;
     }
 
     @PostMapping
@@ -104,21 +99,9 @@ public class PrescriptionController {
             );
         }
 
-        String oldStatus = prescription.getStatus();
-
         prescription.setStatus(newStatus);
 
         Prescription saved = repository.save(prescription);
-
-        if (!"APPROVED".equalsIgnoreCase(oldStatus)
-                && "APPROVED".equals(newStatus)) {
-
-            webNotificationService.notifyPatient(
-                    prescription.getPatientId(),
-                    "Prescription Approved",
-                    "Your doctor has approved your prescription. You can now view it in Smart Patient Care."
-            );
-        }
 
         return Map.of(
                 "success", true,

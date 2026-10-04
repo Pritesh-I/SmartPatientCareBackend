@@ -2,7 +2,6 @@ package com.smartcare.controller;
 
 import com.smartcare.model.FollowUp;
 import com.smartcare.repository.FollowUpRepository;
-import com.smartcare.service.WebNotificationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -14,13 +13,9 @@ import java.util.Map;
 public class FollowUpController {
 
     private final FollowUpRepository repository;
-    private final WebNotificationService webNotificationService;
 
-    public FollowUpController(
-            FollowUpRepository repository,
-            WebNotificationService webNotificationService) {
+    public FollowUpController(FollowUpRepository repository) {
         this.repository = repository;
-        this.webNotificationService = webNotificationService;
     }
 
     @PostMapping
@@ -99,21 +94,9 @@ public class FollowUpController {
             );
         }
 
-        String oldStatus = followUp.getStatus();
-
         followUp.setStatus(newStatus);
 
         FollowUp saved = repository.save(followUp);
-
-        if (!"APPROVED".equalsIgnoreCase(oldStatus)
-                && "APPROVED".equals(newStatus)) {
-
-            webNotificationService.notifyPatient(
-                    followUp.getPatientId(),
-                    "Follow-up Approved",
-                    "Your doctor has approved your follow-up. Please check your follow-up details."
-            );
-        }
 
         return Map.of(
                 "success", true,
