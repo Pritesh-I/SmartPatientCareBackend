@@ -35,13 +35,14 @@ public class AuthController {
 
         UserAccount saved = repository.save(user);
 
-        return Map.of(
-                "success", true,
-                "message", "Account created.",
-                "id", saved.getId(),
-                "username", saved.getUsername(),
-                "role", saved.getRole()
-        );
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Account created.");
+        response.put("id", saved.getId());
+        response.put("username", saved.getUsername());
+        response.put("role", saved.getRole());
+        response.put("profileId", saved.getProfileId());
+        return response;
     }
 
     @PostMapping("/login")
@@ -67,6 +68,7 @@ public class AuthController {
         response.put("username", user.getUsername());
         response.put("name", user.getName());
         response.put("role", user.getRole());
+        response.put("profileId", user.getProfileId());
 
         return response;
     }

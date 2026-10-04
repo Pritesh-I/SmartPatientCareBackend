@@ -1,9 +1,12 @@
 package com.smartcare.controller;
 
 import com.smartcare.model.Appointment;
+import com.smartcare.model.UserAccount;
 import com.smartcare.model.DoctorAvailability;
 import com.smartcare.repository.AppointmentRepository;
 import com.smartcare.repository.DoctorAvailabilityRepository;
+import com.smartcare.repository.UserAccountRepository;
+import com.smartcare.service.FcmService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
@@ -20,13 +23,19 @@ public class AppointmentController {
 
     private final AppointmentRepository appointmentRepository;
     private final DoctorAvailabilityRepository availabilityRepository;
+    private final UserAccountRepository userAccountRepository;
+    private final FcmService fcmService;
 
     public AppointmentController(
             AppointmentRepository appointmentRepository,
-            DoctorAvailabilityRepository availabilityRepository) {
+            DoctorAvailabilityRepository availabilityRepository,
+            UserAccountRepository userAccountRepository,
+            FcmService fcmService) {
 
         this.appointmentRepository = appointmentRepository;
         this.availabilityRepository = availabilityRepository;
+        this.userAccountRepository = userAccountRepository;
+        this.fcmService = fcmService;
     }
 
     @PostMapping
@@ -246,9 +255,34 @@ public class AppointmentController {
         Appointment saved =
                 appointmentRepository.save(appointment);
 
+        int notificationsSent = 0;
+
+        if ("CONFIRMED".equals(newStatus) &&
+                appointment.getPatientId() != null) {
+
+            UserAccount user =
+                    userAccountRepository.findAll()
+                            .stream()
+                            .filter(u ->
+                                    "PATIENT".equalsIgnoreCase(u.getRole()) &&
+                                    appointment.getPatientId().equals(u.getProfileId()))
+                            .findFirst()
+                            .orElse(null);
+
+            if (user != null) {
+                notificationsSent =
+                        fcmService.sendToUser(
+                                user.getId(),
+                                "Appointment Confirmed",
+                                "Your appointment has been confirmed. Please check Smart Patient Care for your appointment and token details."
+                        );
+            }
+        }
+
         return Map.of(
                 "success", true,
                 "message", "Appointment status updated.",
+                "notificationsSent", notificationsSent,
                 "appointment", saved
         );
     }

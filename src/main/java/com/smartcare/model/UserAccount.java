@@ -14,6 +14,9 @@ public class UserAccount {
     private String role;
     private String name;
 
+    // Links login account to Patient/Doctor profile
+    private Long profileId;
+
     public UserAccount() {}
 
     public UserAccount(String username, String password, String role, String name) {
@@ -37,4 +40,7 @@ public class UserAccount {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public Long getProfileId() { return profileId; }
+    public void setProfileId(Long profileId) { this.profileId = profileId; }
 }

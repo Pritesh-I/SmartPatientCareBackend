@@ -1,7 +1,10 @@
 package com.smartcare.controller;
 
 import com.smartcare.model.Consultation;
+import com.smartcare.model.DeviceToken;
 import com.smartcare.repository.ConsultationRepository;
+import com.smartcare.repository.DeviceTokenRepository;
+import com.smartcare.service.FcmService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -12,9 +15,17 @@ import java.util.List;
 public class ConsultationController {
 
     private final ConsultationRepository repository;
+    private final DeviceTokenRepository deviceTokenRepository;
+    private final FcmService fcmService;
 
-    public ConsultationController(ConsultationRepository repository) {
+    public ConsultationController(
+            ConsultationRepository repository,
+            DeviceTokenRepository deviceTokenRepository,
+            FcmService fcmService) {
+
         this.repository = repository;
+        this.deviceTokenRepository = deviceTokenRepository;
+        this.fcmService = fcmService;
     }
 
     @PostMapping
@@ -32,14 +43,18 @@ public class ConsultationController {
         return repository.save(consultation);
     }
 
+    // Patient can see ONLY doctor-approved consultations.
     @GetMapping("/patient/{patientId}")
     public List<Consultation> patientHistory(
             @PathVariable Long patientId) {
 
-        return repository.findByPatientIdOrderByConsultationDateDesc(
-                patientId);
+        return repository.findByPatientIdAndStatus(
+                patientId,
+                "APPROVED"
+        );
     }
 
+    // Doctor can see the complete consultation history.
     @GetMapping("/doctor/{doctorId}")
     public List<Consultation> doctorHistory(
             @PathVariable Long doctorId) {
@@ -48,13 +63,16 @@ public class ConsultationController {
                 doctorId);
     }
 
+    // Doctor approval queue.
     @GetMapping("/doctor/{doctorId}/pending")
     public List<Consultation> pendingDoctorApprovals(
             @PathVariable Long doctorId) {
 
         return repository
                 .findByDoctorIdAndStatusOrderByConsultationDateDesc(
-                        doctorId, "PENDING_APPROVAL");
+                        doctorId,
+                        "PENDING_APPROVAL"
+                );
     }
 
     @PutMapping("/{id}/status")
@@ -85,9 +103,43 @@ public class ConsultationController {
             );
         }
 
+        String oldStatus = consultation.getStatus();
+
         consultation.setStatus(newStatus);
 
         Consultation saved = repository.save(consultation);
+
+        // Send Firebase notification ONLY when approval happens.
+        if (!"APPROVED".equalsIgnoreCase(oldStatus)
+                && "APPROVED".equals(newStatus)) {
+
+            try {
+                List<DeviceToken> devices =
+                        deviceTokenRepository.findByUserId(
+                                consultation.getPatientId());
+
+                for (DeviceToken device : devices) {
+
+                    if (device.getToken() == null ||
+                        device.getToken().isBlank()) {
+                        continue;
+                    }
+
+                    fcmService.sendNotification(
+                            device.getToken(),
+                            "Consultation Approved",
+                            "Your doctor has approved your consultation. Open Smart Patient Care to view the clinical information."
+                    );
+                }
+
+            } catch (Exception e) {
+
+                // Notification failure must not undo doctor approval.
+                System.out.println(
+                        "FCM consultation notification failed: "
+                                + e.getMessage());
+            }
+        }
 
         return java.util.Map.of(
                 "success", true,

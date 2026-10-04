@@ -31,6 +31,12 @@ public class PrescriptionController {
             prescription.setStatus("PENDING_APPROVAL");
         }
 
+        if (prescription.getConsultationId() != null &&
+            !repository.findByConsultationId(prescription.getConsultationId()).isEmpty()) {
+            throw new IllegalArgumentException(
+                    "A prescription already exists for this consultation.");
+        }
+
         return repository.save(prescription);
     }
 
